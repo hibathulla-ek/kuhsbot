@@ -3,50 +3,45 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Replace with your actual bot token from BotFather
-TOKEN = "7833068674:AAG_PR50yIOFF7KtL_W0VJmF4KdRliD-Vr0"
+# Bot Token
+TOKEN = "7833068674:AAGYlqHpVABWyFipJtJoZ3g4d5QD5W3mMc8"
+
+# Dictionary of questions and file paths
+NOTES = {
+    "anatomy of lung": "notes/anatomy_lung.pdf",
+    "physiology of heart": "notes/physiology_heart.pdf",
+    "biochemistry basics": "notes/biochem_basics.pdf",
+}
 
 # Command handler for /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I am your bot. Type 'hi' or 'hlo' to chat with me.")
+    await update.message.reply_text("Hello! Ask me for notes, and I'll send the correct PDF.")
 
-# Message handler to reply with custom messages
+# Function to reply to messages
 async def reply_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text.lower()  # Convert to lowercase for better matching
+    user_text = update.message.text.lower()  # Convert to lowercase
 
-    if user_text == "hi" or user_text == "hlo":
-        await update.message.reply_text("Hey there! How can I help you?")
-    elif user_text == "how are you":
-        await update.message.reply_text("I'm just a bot, but I'm doing great! 😊 What about you?")
-    elif user_text == "hibathulla aara?":
-        await update.message.reply_text("Hibathulla is the king of KMCT CAHS 👑")
+    if user_text in NOTES:  # Check if the message matches a note
+        file_path = NOTES[user_text]
+        await update.message.reply_document(document=open(file_path, "rb"), caption=f"Here is your note on {user_text} 📚")
     else:
-        await update.message.reply_text("I'm not sure how to respond to that. Try saying 'hi' or 'hlo'!")
-
-# Error handler
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    logger.warning(f"Update {update} caused error {context.error}")
+        await update.message.reply_text("Sorry, I don't have notes for that. Try asking something else!")
 
 # Main function to run the bot
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    # Add handlers
+    # Handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_message))
-    
-    # Error handler
-    app.add_error_handler(error_handler)
 
-    # Start polling
+    # Start bot
     print("Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
+

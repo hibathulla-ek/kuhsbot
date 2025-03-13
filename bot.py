@@ -7,7 +7,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Bot Token
-TOKEN = "7833068674:AAGYlqHpVABWyFipJtJoZ3g4d5QD5W3mMc8"
+TOKEN = "7833068674:AAG_PR50yIOFF7KtL_W0VJmF4KdRliD-Vr0"
 
 # Dictionary of questions and file paths
 NOTES = {

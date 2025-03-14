@@ -1,47 +1,21 @@
-﻿import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import os
+from dotenv import load_dotenv
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
 
-# Enable logging
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Load environment variables
+load_dotenv()
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # Get token from .env
 
-# Bot Token
-TOKEN = "7833068674:AAG_PR50yIOFF7KtL_W0VJmF4KdRliD-Vr0"
+# Initialize bot
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
 
-# Dictionary of questions and file paths
-NOTES = {
-    "anatomy of lung": "notes/anatomy_lung.pdf",
-    "physiology of heart": "notes/physiology_heart.pdf",
-    "biochemistry basics": "notes/biochem_basics.pdf",
-}
-
-# Command handler for /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! Ask me for notes, and I'll send the correct PDF.")
-
-# Function to reply to messages
-async def reply_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text.lower()  # Convert to lowercase
-
-    if user_text in NOTES:  # Check if the message matches a note
-        file_path = NOTES[user_text]
-        await update.message.reply_document(document=open(file_path, "rb"), caption=f"Here is your note on {user_text} 📚")
-    else:
-        await update.message.reply_text("Sorry, I don't have notes for that. Try asking something else!")
-
-# Main function to run the bot
-def main():
-    app = Application.builder().token(TOKEN).build()
-
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_message))
-
-    # Start bot
-    print("Bot is running...")
-    app.run_polling()
+@dp.message_handler(commands=['start', 'hello'])
+async def send_welcome(message: types.Message):
+    await message.reply("Hello! I'm your bot 🤖")
 
 if __name__ == "__main__":
-    main()
+    executor.start_polling(dp, skip_updates=True)
+
 

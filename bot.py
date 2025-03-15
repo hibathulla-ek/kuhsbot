@@ -1,16 +1,17 @@
 import logging
+import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+    level=logging.DEBUG,  # Change to DEBUG for more detailed logs
 )
 logger = logging.getLogger(__name__)
 
-# Replace with your actual bot token
-TOKEN = "7833068674:AAG_PR50yIOFF7KtL_W0VJmF4KdRliD-Vr0"
+# Replace with your actual bot token (use environment variables for security)
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7833068674:AAG_PR50yIOFF7KtL_W0VJmF4KdRliD-Vr0")
 
 # Dictionary of responses
 responses = {
@@ -35,9 +36,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Function to reply to messages
 async def reply_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text.lower()
+    user_text = update.message.text.lower()  # Convert to lowercase
     response_text = responses.get(user_text, "I don’t understand that yet, but I'm learning!")
     await update.message.reply_text(response_text)
+
+# Handler for unknown commands
+async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Sorry, I don't recognize that command.")
+
+# Error handler
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f"Update {update} caused error: {context.error}")
+    await update.message.reply_text("Oops! Something went wrong. Please try again later.")
 
 # Main function
 def main():
@@ -46,6 +56,8 @@ def main():
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_message))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown))  # Handle unknown commands
+    app.add_error_handler(error_handler)  # Handle errors
     
     # Start polling
     print("Bot is running...")

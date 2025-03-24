@@ -39,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Command: /sendfile - Send a PDF to user
 async def send_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        file_path = "files/candida.pdf"  # Replace with your file path
+        file_path = "C:\Users\user\Documents\project\files"  # Replace with your file path
         await update.message.reply_document(
             document=InputFile(file_path),
             caption="Here's your PDF! 📄"

@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import Update, InputFile
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -9,90 +9,118 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-# Bot Token (use environment variable for security)
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7833068674:AAG_PR50yIOFF7KtL_W0VJmF4KdRliD-Vr0")
+TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 
-# Predefined text responses
-responses = {
-    "hi": "Hello! How can I help you?",
-    "hello": "Hey there! 😊",
-    "notes": "Here are your notes! Use /sendfile to get a sample PDF.",
-    "thank you": "You're welcome!",
+# ── Add your file_ids here after uploading PDFs ──────────────
+# Format: "keyword": ("file_id", "Display Name")
+NOTES = {
+    "biochemistry":    ("", "Biochemistry Notes - Paper XIII"),
+    "microbiology":    ("", "Microbiology Notes - Paper XIV"),
+    "pathology":       ("", "Pathology Notes - Paper XV"),
+    "histotechnology": ("", "Histotechnology Notes"),
+    "cytogenetics":    ("", "Cytogenetics Notes"),
+    "mycology":        ("", "Mycology Notes"),
+    "virology":        ("", "Virology Notes"),
+    "haematology":     ("", "Haematology Notes"),
+    "qc":              ("", "Quality Control Notes"),
+    "liver":           ("", "Liver Function Tests"),
+    "renal":           ("", "Renal Function Tests"),
+    "minerals":        ("", "Mineral Metabolism Notes"),
 }
 
-# Command: /start
+# ── /start ────────────────────────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Welcome! I can:\n"
-        "- Chat with you\n"
-        "- Send files (/sendfile)\n"
-        "- Receive files (just upload one)"
+        "📚 *KUHS MLT Notes Bot*\n\n"
+        "Commands:\n"
+        "• /notes — see all available topics\n"
+        "• /get biochemistry — get notes by topic\n"
+        "• /get mycology — get mycology notes\n\n"
+        "Or just type the topic name directly!",
+        parse_mode="Markdown"
     )
 
-# Command: /sendfile - Send a PDF to user
-async def send_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        file_path = "C:\Users\user\Documents\project\files"  # Replace with your file path
-        await update.message.reply_document(
-            document=InputFile(file_path),
-            caption="Here's your PDF! 📄"
+# ── /notes ────────────────────────────────────────────────────
+async def list_notes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = "📚 *Available KUHS MLT Notes*\n\n"
+    for keyword, (file_id, name) in NOTES.items():
+        icon = "✅" if file_id else "⏳"
+        msg += f"{icon} `/get {keyword}` — {name}\n"
+    msg += "\n_⏳ = coming soon  ✅ = ready to download_"
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+# ── /get <keyword> ────────────────────────────────────────────
+async def get_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text(
+            "Usage: `/get biochemistry`\n\nSend /notes to see all topics.",
+            parse_mode="Markdown"
         )
-    except Exception as e:
-        await update.message.reply_text("Failed to send file. Error: " + str(e))
+        return
+    keyword = " ".join(context.args).lower().strip()
+    await send_note(update, keyword)
 
-# Handle uploaded files
-async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        # Create 'downloads' folder if it doesn't exist
-        os.makedirs("downloads", exist_ok=True)
+# ── Core: send note by keyword ────────────────────────────────
+async def send_note(update: Update, keyword: str):
+    if keyword not in NOTES:
+        # Try partial match
+        matches = [k for k in NOTES if keyword in k]
+        if not matches:
+            await update.message.reply_text(
+                f"❌ No notes found for *{keyword}*\n\nSend /notes to see all available topics.",
+                parse_mode="Markdown"
+            )
+            return
+        keyword = matches[0]
 
-        # Download the file
-        file = await update.message.document.get_file()
-        file_name = update.message.document.file_name
-        save_path = f"downloads/{file_name}"
-        await file.download_to_drive(save_path)
+    file_id, name = NOTES[keyword]
 
-        await update.message.reply_text(f"✅ File saved as: {file_name}")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error saving file: {str(e)}")
+    if not file_id:
+        await update.message.reply_text(
+            f"⏳ *{name}* is not uploaded yet.\nCheck back soon!",
+            parse_mode="Markdown"
+        )
+        return
 
-# Handle text messages
-async def reply_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text.lower()
-    response = responses.get(user_text, "I don't understand. Try /help")
-    await update.message.reply_text(response)
+    await update.message.reply_document(
+        document=file_id,
+        caption=f"📄 *{name}*\n_KUHS MLT Notes_",
+        parse_mode="Markdown"
+    )
 
-# Error handler
-async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Update {update} caused error: {context.error}")
+# ── Handle plain text (keyword detection) ────────────────────
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.lower().strip()
+    chat_type = update.message.chat.type
+    bot_username = context.bot.username.lower()
+
+    # Remove bot mention if present
+    clean = text.replace(f"@{bot_username}", "").strip()
+
+    # In groups: only respond if mentioned OR exact keyword match
+    if chat_type != "private":
+        mentioned = f"@{bot_username}" in text
+        if not mentioned:
+            if clean in NOTES and len(clean.split()) <= 2:
+                await send_note(update, clean)
+            return
+
+    await send_note(update, clean)
 
 def main():
-    # Create the Application
     app = Application.builder().token(TOKEN).build()
-
-    # Add handlers
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("sendfile", send_file))
-    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_message))
-    app.add_error_handler(error)
-
-    # Start the bot
+    app.add_handler(CommandHandler("notes", list_notes))
+    app.add_handler(CommandHandler("get", get_note))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     print("Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":
-    # Create necessary folders
-    os.makedirs("files", exist_ok=True)
-    os.makedirs("downloads", exist_ok=True)
     main()
-
-
-

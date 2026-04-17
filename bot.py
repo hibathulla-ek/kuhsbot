@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TOKEN = os.environ[7136647787:AAHICmBDcdcgHkZk-fjoLs_HTay7zQMVoIc]
 
 # ── Add your file_ids here after uploading PDFs ──────────────
 # Format: "keyword": ("file_id", "Display Name")
